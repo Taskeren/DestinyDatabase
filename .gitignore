@@ -1,2 +1,10 @@
-# Project exclude paths
+# Maven
 /target/
+
+# IDEA
+/.idea
+
+# Runtime
+/temp
+latest.log
+localization_*.json
