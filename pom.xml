@@ -129,7 +129,7 @@
                         <plugin>kotlinx-serialization</plugin>
                     </compilerPlugins>
                     <args>
-                        <arg>-opt-in=kotlin.RequiresOptIn</arg>
+                        <arg>-Xopt-in=kotlin.RequiresOptIn</arg>
                     </args>
                 </configuration>
                 <dependencies>
