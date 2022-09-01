@@ -2,10 +2,11 @@ package com.github.taskeren.bungie.entity.user
 
 import com.github.taskeren.bungie.entity.MembershipType
 import com.github.taskeren.bungie.entity.toMembershipType
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class UserInfoCard(
-	val supplementalDisplayName: String,
-	val iconPath: String,
+	val iconPath: String? = null,
 	val crossSaveOverride: Int,
 	val applicableMembershipTypes: List<Int>,
 	val isPublic: Boolean,

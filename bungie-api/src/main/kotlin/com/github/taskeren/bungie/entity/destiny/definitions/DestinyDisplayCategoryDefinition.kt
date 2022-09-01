@@ -1,7 +1,9 @@
 package com.github.taskeren.bungie.entity.destiny.definitions
 
 import com.github.taskeren.bungie.entity.destiny.definitions.common.DestinyDisplayPropertiesDefinition
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DestinyDisplayCategoryDefinition(
 	val index: Int,
 	val identifier: String,

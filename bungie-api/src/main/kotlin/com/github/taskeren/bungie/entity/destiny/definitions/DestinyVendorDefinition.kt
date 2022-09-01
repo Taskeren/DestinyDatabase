@@ -1,7 +1,9 @@
 package com.github.taskeren.bungie.entity.destiny.definitions
 
 import com.github.taskeren.bungie.entity.dates.DateRange
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DestinyVendorDefinition(
 	val displayProperties: DestinyVendorDisplayPropertiesDefinition,
 	val vendorProgressionType: Int,

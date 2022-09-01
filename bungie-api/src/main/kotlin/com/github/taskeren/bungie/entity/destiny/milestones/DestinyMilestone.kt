@@ -1,7 +1,10 @@
 package com.github.taskeren.bungie.entity.destiny.milestones
 
-import java.util.*
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import java.time.OffsetDateTime
 
+@Serializable
 data class DestinyMilestone(
 	val milestoneHash: UInt,
 	val availableQuests: List<DestinyMilestoneQuest>,
@@ -10,7 +13,9 @@ data class DestinyMilestone(
 	val vendorHashes: List<UInt>,
 	val vendors: List<DestinyMilestoneVendor>,
 	val rewards: List<DestinyMilestoneRewardCategory>,
-	val startDate: Date?,
-	val endDate: Date?,
+	@Contextual
+	val startDate: OffsetDateTime?,
+	@Contextual
+	val endDate: OffsetDateTime?,
 	val order: Int
 )

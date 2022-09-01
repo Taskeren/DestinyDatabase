@@ -1,5 +1,8 @@
 package com.github.taskeren.bungie.entity.destiny
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class DestinyProgression(
 	val progressionHash: UInt,
 	val dailyProgress: Int,

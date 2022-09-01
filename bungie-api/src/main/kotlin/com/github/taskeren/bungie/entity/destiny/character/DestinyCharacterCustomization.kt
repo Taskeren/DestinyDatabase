@@ -1,5 +1,8 @@
 package com.github.taskeren.bungie.entity.destiny.character
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class DestinyCharacterCustomization(
 	val personality: UInt,
 	val face: UInt,

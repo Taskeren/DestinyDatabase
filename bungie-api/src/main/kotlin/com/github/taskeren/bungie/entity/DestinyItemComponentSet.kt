@@ -1,7 +1,9 @@
 package com.github.taskeren.bungie.entity
 
 import com.github.taskeren.bungie.entity.destiny.entities.items.*
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DestinyItemComponentSet<T>(
 	val instances: DictionaryComponentResponse<T, DestinyItemInstanceComponent>,
 	val perks: DictionaryComponentResponse<T, DestinyItemPerksComponent>,

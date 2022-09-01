@@ -1,7 +1,9 @@
 package com.github.taskeren.bungie.entity.destiny.progression
 
 import com.github.taskeren.bungie.entity.destiny.DestinyProgressionResetEntry
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DestinyFactionProgression(
 	val factionHash: UInt,
 	val factionVendorIndex: Int,

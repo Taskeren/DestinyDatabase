@@ -2,7 +2,9 @@ package com.github.taskeren.bungie.entity.destiny.responses
 
 import com.github.taskeren.bungie.entity.SingleComponentResponse
 import com.github.taskeren.bungie.entity.destiny.entities.items.*
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DestinyItemResponse(
 	val characterId: Long?,
 	val item: SingleComponentResponse<DestinyItemComponent>?,

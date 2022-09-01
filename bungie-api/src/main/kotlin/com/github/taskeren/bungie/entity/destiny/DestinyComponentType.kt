@@ -1,5 +1,8 @@
 package com.github.taskeren.bungie.entity.destiny
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class DestinyComponentType(val value: Int) {
 	None(0),
 	Profiles(100),

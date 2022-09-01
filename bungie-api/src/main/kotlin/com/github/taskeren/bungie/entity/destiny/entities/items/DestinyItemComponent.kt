@@ -1,8 +1,11 @@
 package com.github.taskeren.bungie.entity.destiny.entities.items
 
 import com.github.taskeren.bungie.entity.destiny.quests.DestinyObjectiveProgress
-import java.util.*
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import java.time.OffsetDateTime
 
+@Serializable
 data class DestinyItemComponent(
 	val itemHash: UInt,
 	val itemInstanceId: Long?,
@@ -14,7 +17,8 @@ data class DestinyItemComponent(
 	val lockable: Boolean,
 	val state: Int,
 	val overrideStyleItemHash: UInt,
-	val expirationDate: Date?,
+	@Contextual
+	val expirationDate: OffsetDateTime?,
 	val isWrapper: Boolean,
 	val tooltipNotificationIndexes: List<Int>,
 	val metricObjective: DestinyObjectiveProgress,

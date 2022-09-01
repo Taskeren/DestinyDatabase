@@ -1,7 +1,9 @@
 package com.github.taskeren.bungie.entity.destiny.definitions
 
 import com.github.taskeren.bungie.entity.destiny.definitions.common.DestinyIconSequenceDefinition
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DestinyVendorDisplayPropertiesDefinition(
 	val largeIcon: String,
 	val subtitle: String,

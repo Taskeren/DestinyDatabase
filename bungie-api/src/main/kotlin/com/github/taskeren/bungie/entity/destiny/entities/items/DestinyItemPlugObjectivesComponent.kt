@@ -1,3 +1,7 @@
 package com.github.taskeren.bungie.entity.destiny.entities.items
 
-data class DestinyItemPlugObjectivesComponent(val objectivesPerPlug: Map<UInt, List<Any>>) // TODO: Solve the problem that what is Any
+import com.github.taskeren.bungie.entity.Placeholder
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class DestinyItemPlugObjectivesComponent(val objectivesPerPlug: Map<UInt, List<Placeholder>>) // TODO: Solve the problem that what is Any

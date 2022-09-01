@@ -1,5 +1,8 @@
 package com.github.taskeren.bungie.entity.dates
 
-import java.util.*
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import java.time.OffsetDateTime
 
-data class DateRange(val start: Date, val end: Date)
+@Serializable
+data class DateRange(@Contextual val start: OffsetDateTime, @Contextual val end: OffsetDateTime)

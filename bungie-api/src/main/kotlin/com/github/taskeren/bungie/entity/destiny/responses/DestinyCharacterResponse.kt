@@ -9,7 +9,9 @@ import com.github.taskeren.bungie.entity.destiny.components.records.DestinyChara
 import com.github.taskeren.bungie.entity.*
 import com.github.taskeren.bungie.entity.destiny.entities.characters.*
 import com.github.taskeren.bungie.entity.destiny.entities.inventory.DestinyInventoryComponent
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class DestinyCharacterResponse(
 	val inventory: SingleComponentResponse<DestinyInventoryComponent>?,
 	val character: SingleComponentResponse<DestinyCharacterComponent>?,

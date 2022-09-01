@@ -2,13 +2,17 @@ package com.github.taskeren.bungie.entity.destiny.entities.characters
 
 import com.github.taskeren.bungie.entity.destiny.DestinyProgression
 import com.github.taskeren.bungie.entity.destiny.misc.DestinyColor
-import java.util.*
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import java.time.OffsetDateTime
 
+@Serializable
 data class DestinyCharacterComponent(
 	val membershipId: Long,
 	val membershipType: Int,
 	val characterId: Long,
-	val dateLastPlayed: Date,
+	@Contextual
+	val dateLastPlayed: OffsetDateTime,
 	val minutesPlayedThisSession: Long,
 	val minutesPlayedTotal: Int,
 	val light: Int,

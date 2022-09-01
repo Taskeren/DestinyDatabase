@@ -1,5 +1,8 @@
 package com.github.taskeren.bungie.entity.destiny.definitions
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class DestinyVendorCategoryEntryDefinition(
 	val categoryIndex: Int,
 	val sortValue: Int,

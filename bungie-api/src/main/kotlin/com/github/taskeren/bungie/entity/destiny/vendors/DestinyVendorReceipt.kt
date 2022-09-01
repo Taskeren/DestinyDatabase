@@ -1,8 +1,11 @@
 package com.github.taskeren.bungie.entity.destiny.vendors
 
 import com.github.taskeren.bungie.entity.destiny.DestinyItemQuantity
-import java.util.*
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import java.time.OffsetDateTime
 
+@Serializable
 data class DestinyVendorReceipt(
 	val currencyPaid: DestinyItemQuantity,
 	val itemReceived: DestinyItemQuantity,
@@ -10,5 +13,6 @@ data class DestinyVendorReceipt(
 	val purchasedByCharacterId: Long,
 	val sequenceNumber: Int,
 	val timeToExpiration: Int,
-	val expiresOn: Date
+	@Contextual
+	val expiresOn: OffsetDateTime
 )

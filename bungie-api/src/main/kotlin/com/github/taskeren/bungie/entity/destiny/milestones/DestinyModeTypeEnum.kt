@@ -1,8 +1,11 @@
 package com.github.taskeren.bungie.entity.destiny.milestones
 
+import kotlinx.serialization.Serializable
+
 /**
  * This class is created by Taskeren and not exists in BungieNet API Document.
  */
+@Serializable
 enum class DestinyModeTypeEnum(val value: Int) {
 	None(0),
 	Story(2),

@@ -1,6 +1,14 @@
 package com.github.taskeren.bungie.entity.destiny.entities.items
 
 import com.github.taskeren.bungie.entity.destiny.quests.DestinyObjectiveProgress
-import java.util.*
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import java.time.OffsetDateTime
 
-data class DestinyItemObjectivesComponent(val objectives: List<DestinyObjectiveProgress>, val flavorObjective: DestinyObjectiveProgress, val dateCompleted: Date?)
+@Serializable
+data class DestinyItemObjectivesComponent(
+	val objectives: List<DestinyObjectiveProgress>,
+	val flavorObjective: DestinyObjectiveProgress,
+	@Contextual
+	val dateCompleted: OffsetDateTime?
+)
