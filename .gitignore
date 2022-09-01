@@ -8,3 +8,6 @@
 /temp
 latest.log
 localization_*.json
+
+build
+.gradle
