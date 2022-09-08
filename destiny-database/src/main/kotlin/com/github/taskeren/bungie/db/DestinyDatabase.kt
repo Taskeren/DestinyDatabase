@@ -1,5 +1,6 @@
 package com.github.taskeren.bungie.db
 
+import com.github.taskeren.bungie.BungieApi
 import com.github.taskeren.bungie.compat.BungieLanguage
 import com.github.taskeren.bungie.db.doc.IdAndName
 import com.github.taskeren.bungie.db.updater.DatabaseUpdater
@@ -9,7 +10,7 @@ import com.mongodb.client.MongoDatabase
 import org.litote.kmongo.KMongo
 import org.litote.kmongo.getCollection
 
-class DestinyDatabase(connectionStr: String = "mongodb://localhost:27017/") {
+class DestinyDatabase(val api: BungieApi, connectionStr: String = "mongodb://localhost:27017/") {
 
 	private val db: MongoDatabase
 

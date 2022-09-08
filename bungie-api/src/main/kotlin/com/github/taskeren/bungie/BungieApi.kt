@@ -5,25 +5,28 @@ import com.github.taskeren.bungie.entity.MembershipType
 import com.github.taskeren.bungie.entity.destiny.DestinyComponentType
 import com.github.taskeren.bungie.entity.destiny.config.DestinyManifest
 import com.github.taskeren.bungie.entity.destiny.definitions.DestinyDefinition
-import com.github.taskeren.bungie.entity.destiny.definitions.DestinyInventoryItemDefinition
 import com.github.taskeren.bungie.entity.destiny.responses.*
 import com.github.taskeren.bungie.entity.user.UserInfoCard
 import com.github.taskeren.tserial.OffsetDateTimeSerializer
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
 import okhttp3.*
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.internal.EMPTY_REQUEST
 import org.apache.logging.log4j.LogManager
 import java.net.URLEncoder
 import java.time.OffsetDateTime
 
 private val logger = LogManager.getLogger("BungieApi")
 
-object BungieApi {
+class BungieApi(
+	val xApiKey: String,
+) {
 
 	private val cli = OkHttpClient()
-
-	var xApiKey = ""
-	var debugMode = false
 
 	private fun get(url: String): Response {
 		val req = Request.Builder().get().url("https://www.bungie.net/Platform${URLEncoder.encode(url, "utf-8")}")
@@ -38,7 +41,6 @@ object BungieApi {
 					query.forEach { (queryName, queryEntity) ->
 						if(queryEntity is Iterable<*>) {
 							val queryValue = queryEntity.filterNotNull().joinToString(separator = ",")
-							// Joiner.on(',').skipNulls().join(queryEntity)
 							this.addQueryParameter(queryName, queryValue)
 						} else {
 							throw BungieException("Unexpected type of queries: ${queryEntity.javaClass.canonicalName}")
@@ -50,12 +52,54 @@ object BungieApi {
 		return cli.newCall(req).execute()
 	}
 
+	private fun post(url: String, query: Map<String, Any> = mapOf(), body: RequestBody = EMPTY_REQUEST): Response {
+		val httpUrl =
+			HttpUrl.Builder().scheme("https").host("www.bungie.net").addPathSegments("/Platform/").addPathSegment(url)
+				.apply {
+					query.forEach { (queryName, queryEntity) ->
+						if(queryEntity is Iterable<*>) {
+							val queryValue = queryEntity.filterNotNull().joinToString(separator = ",")
+							this.addQueryParameter(queryName, queryValue)
+						}
+					}
+				}.build()
+		val request = Request.Builder().post(body).url(httpUrl).header("X-API-Key", xApiKey).build()
+		return cli.newCall(request).execute()
+	}
+
 	private fun getResource(url: String): Response {
 		val req = Request.Builder().get().url("https://www.bungie.net$url").header("X-API-Key", xApiKey).build()
 		return cli.newCall(req).execute()
 	}
 
-	object Destiny2 {
+	val authorize by lazy { Authorize() }
+	val destiny2 = Destiny2()
+	val helpers = Helpers()
+
+	inner class Authorize internal constructor() {
+
+		/**
+		 * 获取授权地址
+		 * @param clientId 应用的 client_id（在棒鸡 Application 中查看）
+		 */
+		fun getAuthorizeUrl(clientId: String): HttpUrl {
+			return "https://www.bungie.net/en/oauth/authorize".toHttpUrl().newBuilder()
+				.addQueryParameter("response_type", "code")
+				.addQueryParameter("client_id", clientId)
+				.addQueryParameter("state", "1")
+				.build()
+		}
+
+		fun getToken(code: String, clientId: String, clientSecret: String): Response =
+			post("/App/OAuth/Token", body = Json.encodeToString(mapOf(
+				"grant_type" to "authorization_code",
+				"code" to code,
+				"client_id" to clientId,
+				"client_secret" to clientSecret
+			)).toRequestBody(contentType = "application/x-www-form-urlencoded".toMediaType()))
+	}
+
+	inner class Destiny2 internal constructor() {
 
 		fun getDestinyManifest(): DestinyManifest = get("/Destiny2/Manifest/").json.response.getTyped()
 
@@ -94,23 +138,30 @@ object BungieApi {
 		// TODO: Add other API entries
 	}
 
-	object Helpers {
+	inner class Helpers internal constructor() {
 
-		fun getBungieResource(path: String): Response = getResource(path)
+		fun getBungieResource(path: String) = getResource(path)
+
+	}
+
+	companion object {
 
 		/**
-		 * @see DestinyInventoryItemDefinition.getLightGGUrl
+		 * 获取 Light.gg 的网页地址
 		 */
-		fun getLightGGUrl(hash: UInt): String = "https://www.light.gg/db/items/$hash/"
+		val HashId.lggUrl get() = "https://www.light.gg/db/items/$hash/"
 
 	}
 
 }
 
-fun Response.getString(): String {
-	val str = this.body?.string()
-	if(BungieApi.debugMode) println(str)
-	return str ?: throw BungieException(NullPointerException("Body"))
+@JvmInline
+value class HashId(val hash: UInt) {
+
+	companion object {
+		fun UInt.hashId() = HashId(this)
+		fun String.hashId() = HashId(this.toUInt())
+	}
 }
 
 val Response.json: JsonElement
@@ -147,17 +198,6 @@ private inline fun <reified T> JsonElement.getTyped() = runCatching {
 	logger.error("Unable to serialize the content follow to ${T::class.java.simpleName}:")
 	logger.error(this)
 }.getOrThrow()
-
-@Deprecated("old")
-fun Response.getKtJson(): JsonElement {
-	val json = runCatching {
-		ktJson.parseToJsonElement(
-			this.body?.string() ?: throw NullPointerException("Body")
-		)
-	}.onFailure { throw BungieException(it) }.getOrNull()
-	if(BungieApi.debugMode) println(json)
-	return json ?: throw NullPointerException("KtJsonElement")
-}
 
 val JsonElement.response: JsonElement
 	get() = this.jsonObject.response

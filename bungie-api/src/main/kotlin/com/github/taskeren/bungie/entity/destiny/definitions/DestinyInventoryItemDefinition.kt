@@ -1,6 +1,7 @@
 package com.github.taskeren.bungie.entity.destiny.definitions
 
-import com.github.taskeren.bungie.BungieApi
+import com.github.taskeren.bungie.BungieApi.Companion.lggUrl
+import com.github.taskeren.bungie.HashId.Companion.hashId
 import com.github.taskeren.bungie.entity.destiny.definitions.common.DestinyDisplayPropertiesDefinition
 import com.github.taskeren.bungie.entity.destiny.definitions.items.DestinyItemPlugDefinition
 import com.github.taskeren.bungie.entity.destiny.misc.DestinyColor
@@ -74,6 +75,6 @@ data class DestinyInventoryItemDefinition(
 	val redacted: Boolean?
 ) {
 
-	fun getLightGGUrl() = BungieApi.Helpers.getLightGGUrl(hash!!)
+	fun getLightGGUrl() = hash!!.hashId().lggUrl
 
 }

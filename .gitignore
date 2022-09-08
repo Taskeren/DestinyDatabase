@@ -11,3 +11,6 @@ localization_*.json
 
 build
 .gradle
+
+# Test
+/bungie-api/test.toml

@@ -1,6 +1,5 @@
 package com.github.taskeren.bungie.db.updater
 
-import com.github.taskeren.bungie.BungieApi
 import com.github.taskeren.bungie.db.DestinyDatabase
 import com.github.taskeren.bungie.db.updater.tickets.UpdateTicket
 import com.github.taskeren.bungie.db.updater.tickets.UpdateTicketItemDefinition
@@ -23,14 +22,11 @@ class DatabaseUpdater(val database: DestinyDatabase) {
 	}
 
 	fun updateManifest(): DestinyManifest {
-		BungieApi.Destiny2.getDestinyManifest().let {
-			cacheDestinyManifest = it
-			return it
-		}
+		return database.api.destiny2.getDestinyManifest().apply { cacheDestinyManifest = this }
 	}
 
 	fun updateItemDefinitions(vararg lang: Language) {
-		executeTicket(UpdateTicketItemDefinition(*lang))
+		executeTicket(UpdateTicketItemDefinition(database.api, *lang))
 	}
 
 }

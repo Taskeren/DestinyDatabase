@@ -5,11 +5,11 @@ import com.github.taskeren.bungie.compat.EntityType
 import com.github.taskeren.bungie.db.updater.DatabaseUpdater
 import com.github.taskeren.bungie.db.updater.Language
 import com.github.taskeren.bungie.entity.destiny.definitions.DestinyInventoryItemDefinition
-import com.github.taskeren.bungie.getKtJson
+import com.github.taskeren.bungie.json
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 
-class UpdateTicketItemDefinition(vararg val lang: Language) : UpdateTicket {
+class UpdateTicketItemDefinition(val api: BungieApi, vararg val lang: Language) : UpdateTicket {
 
 	override fun execute(updater: DatabaseUpdater) {
 		lang.forEach { lang ->
@@ -17,7 +17,7 @@ class UpdateTicketItemDefinition(vararg val lang: Language) : UpdateTicket {
 			// 获取数据
 			val itemDefinitionUrl = updater.getDestinyManifest()
 				.getJsonWorldComponentContentPaths(lang.bungieLang, EntityType.DestinyInventoryItemDefinition)!!
-			val itemDefinitions = BungieApi.Helpers.getBungieResource(itemDefinitionUrl).getKtJson()
+			val itemDefinitions = api.helpers.getBungieResource(itemDefinitionUrl).json
 
 			logger.info("成功获取 ${lang.getLocalizedName()} 的物品定义数据，开始写入数据库")
 			// 连接数据库
