@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
+    `maven-publish`
 }
 
 group = "com.github.taskeren"
@@ -27,4 +28,16 @@ dependencies {
 
 tasks.getByName<Test>("test") {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "com.github.taskeren"
+            artifactId = "destiny-database"
+            version = "1.0"
+
+            from(components["java"])
+        }
+    }
 }
