@@ -90,13 +90,14 @@ class BungieApi(
 				.build()
 		}
 
-		fun getToken(code: String, clientId: String, clientSecret: String): Response =
-			post("/App/OAuth/Token", body = Json.encodeToString(mapOf(
-				"grant_type" to "authorization_code",
-				"code" to code,
-				"client_id" to clientId,
-				"client_secret" to clientSecret
-			)).toRequestBody(contentType = "application/x-www-form-urlencoded".toMediaType()))
+		fun getToken(code: String, clientId: String, clientSecret: String): AccessToken =
+			post("/App/OAuth/Token", body = FormBody.Builder()
+				.add("grant_type", "authorization_code")
+				.add("code", code)
+				.add("client_id", clientId)
+				.add("client_secret", clientSecret)
+				.build()
+			).json.getTyped()
 	}
 
 	inner class Destiny2 internal constructor() {

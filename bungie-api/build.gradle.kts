@@ -15,6 +15,10 @@ dependencies {
     api("com.squareup.okhttp3:okhttp:4.10.0")
     api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.0")
 
+    implementation(project(":bungie-api-oauth"))
+
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+
     implementation("org.slf4j:slf4j-api:2.0.0")
     implementation("org.apache.logging.log4j:log4j-api:2.18.0")
     implementation("org.apache.logging.log4j:log4j-core:2.18.0")
