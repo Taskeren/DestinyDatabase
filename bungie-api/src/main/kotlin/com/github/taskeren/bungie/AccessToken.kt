@@ -2,6 +2,8 @@ package com.github.taskeren.bungie
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import java.time.LocalDateTime
 
 @Serializable
 data class AccessToken(
@@ -17,4 +19,11 @@ data class AccessToken(
 	val refreshExpiresIn: Long,
 	@SerialName("membership_id")
 	val membershipId: String
-)
+) {
+	@Transient
+	private val createAt = LocalDateTime.now()
+
+	private val isAvailable get() = createAt.plusSeconds(expiresIn) > LocalDateTime.now()
+
+	private val isRefreshTokenAvailable get() = createAt.plusSeconds(refreshExpiresIn) > LocalDateTime.now()
+}

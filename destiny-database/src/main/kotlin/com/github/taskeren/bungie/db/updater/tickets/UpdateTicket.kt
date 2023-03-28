@@ -18,6 +18,6 @@ interface UpdateTicket {
 			ignoreUnknownKeys = true
 		}
 
-	fun execute(updater: DatabaseUpdater)
+	suspend fun execute(updater: DatabaseUpdater)
 
 }

@@ -11,21 +11,21 @@ class DatabaseUpdater(val database: DestinyDatabase) {
 
 	// Assets Getter
 
-	fun getDestinyManifest(): DestinyManifest {
+	suspend fun getDestinyManifest(): DestinyManifest {
 		return cacheDestinyManifest ?: updateManifest()
 	}
 
 	// Update Methods
 
-	fun executeTicket(ticket: UpdateTicket) {
+	suspend fun executeTicket(ticket: UpdateTicket) {
 		ticket.execute(this)
 	}
 
-	fun updateManifest(): DestinyManifest {
-		return database.api.destiny2.getDestinyManifest().apply { cacheDestinyManifest = this }
+	suspend fun updateManifest(): DestinyManifest {
+		return database.api.destiny2.getDestinyManifest().data.apply { cacheDestinyManifest = this }
 	}
 
-	fun updateItemDefinitions(vararg lang: Language) {
+	suspend fun updateItemDefinitions(vararg lang: Language) {
 		executeTicket(UpdateTicketItemDefinition(database.api, *lang))
 	}
 

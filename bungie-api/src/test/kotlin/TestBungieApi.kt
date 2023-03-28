@@ -3,47 +3,20 @@ import com.github.taskeren.bungie.compat.BungieLanguage
 import com.github.taskeren.bungie.compat.EntityType
 import com.github.taskeren.bungie.entity.MembershipType
 import com.github.taskeren.bungie.entity.destiny.DestinyComponentType
-import com.moandjiezana.toml.Toml
-import org.junit.jupiter.api.Test
-import java.io.File
+import kotlinx.coroutines.runBlocking
 
+/**
+ * Bungie API 测试例
+ *
+ * 使用 TestMain 启动测试！
+ */
 class TestBungieApi {
 
-	val config: Toml
+	lateinit var bungieApi: BungieApi
 
-	init {
-		// 使用系统代理
-		System.setProperty("java.net.useSystemProxies", "true")
-
-		// 加载数据
-		val configFile = File("test.toml")
-		config = Toml().read(configFile)
-	}
-
-	val clientId = config.getLong("client_id").toString()
-	val clientSecret = config.getString("client_secret")
-
-	val bungieApi = BungieApi("734738f107484a19851235fbe8f8af90")
-
-	@Test
-	fun `test authorize`() {
-		val resp = bungieApi.authorize.getAuthorizeUrl(clientId)
-
-		spark("GetAuthorizeUrl<TEST>", resp)
-	}
-
-	@Test
-	fun `test get token`() {
-		val code = config.getString("code")?.toString() ?: throw IllegalArgumentException("Argument 'code' is unset.")
-
-		val token = bungieApi.authorize.getToken(code, clientId, clientSecret)
-
-		spark("GetToken<TEST>", token)
-	}
-
-	@Test
-	fun testGetManifest() {
-		val mani = bungieApi.destiny2.getDestinyManifest()
+	@TestByNova
+	fun testGetManifest() = runBlocking {
+		val mani = bungieApi.destiny2.getDestinyManifest().data
 
 		val chUrl = mani.getJsonWorldComponentContentPaths(
 			BungieLanguage.Chinese,
@@ -53,33 +26,35 @@ class TestBungieApi {
 		spark("GetManifest<TEST>", mani, chUrl)
 	}
 
-	@Test
-	fun testSearchPlayer() {
+	@TestByNova
+	fun testSearchPlayer() = runBlocking {
 		val playerList = bungieApi.destiny2.searchDestinyPlayer(
 			MembershipType.All,
 			"Taskeren-3#5322"
-		)
+		).data
 
 		spark("SearchPlayer<TEST>", playerList.map { it.displayName }, playerList, playerList.map { it.getTrackerNetworkUrl() })
 	}
 
-	@Test
-	fun testGetProfileProfiles() {
+	@TestByNova
+	fun testGetProfileProfiles() = runBlocking {
 		val data = bungieApi.destiny2.getProfile(
 			MembershipType.TigerSteam,
 			4611686018500727480,
 			listOf(DestinyComponentType.Profiles)
-		)
+		).data
+
 		spark("GetProfileProfiles<TEST>", data)
 	}
 
-	@Test
-	fun testGetProfileCollectibles() {
+	@TestByNova
+	fun testGetProfileCollectibles() = runBlocking {
 		val data = bungieApi.destiny2.getProfile(
 			MembershipType.TigerSteam,
 			4611686018500727480,
 			listOf(DestinyComponentType.Collectibles)
-		)
+		).data
+
 		spark("GetProfileCollectibles<TEST>", data)
 	}
 

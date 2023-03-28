@@ -5,74 +5,117 @@ import com.github.taskeren.bungie.entity.MembershipType
 import com.github.taskeren.bungie.entity.destiny.DestinyComponentType
 import com.github.taskeren.bungie.entity.destiny.config.DestinyManifest
 import com.github.taskeren.bungie.entity.destiny.definitions.DestinyDefinition
-import com.github.taskeren.bungie.entity.destiny.responses.*
+import com.github.taskeren.bungie.entity.destiny.responses.DestinyCharacterResponse
+import com.github.taskeren.bungie.entity.destiny.responses.DestinyItemResponse
+import com.github.taskeren.bungie.entity.destiny.responses.DestinyProfileResponse
 import com.github.taskeren.bungie.entity.user.UserInfoCard
-import com.github.taskeren.tserial.OffsetDateTimeSerializer
-import kotlinx.serialization.encodeToString
+import com.github.taskeren.bungie.util.BungieParametersBuilder
+import com.github.taskeren.bungie.util.Debugging
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.util.reflect.*
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-import kotlinx.serialization.modules.SerializersModule
 import okhttp3.*
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.internal.EMPTY_REQUEST
-import org.apache.logging.log4j.LogManager
-import java.net.URLEncoder
-import java.time.OffsetDateTime
+import org.slf4j.LoggerFactory
 
-private val logger = LogManager.getLogger("BungieApi")
+private val logger = LoggerFactory.getLogger("BungieApi")
 
-class BungieApi(
-	val xApiKey: String,
+const val HEADER_API_KEY = "x-api-key"
+
+/**
+ * 构建一个棒鸡API
+ */
+fun BungieApi(xApiKey: String, accessToken: String? = null) = BungieApiBuilder {
+	this.apiKey = xApiKey
+	this.accessToken = accessToken
+}.build()
+
+fun BungieApi(block: BungieApiBuilder.() -> Unit) = BungieApiBuilder(block).build()
+
+class BungieApi internal constructor(
+	private val xApiKey: String,
+	private var accessToken: String?,
+	private val http: HttpClient,
 ) {
 
-	private val cli = OkHttpClient()
-
-	private fun get(url: String): Response {
-		val req = Request.Builder().get().url("https://www.bungie.net/Platform${URLEncoder.encode(url, "utf-8")}")
-			.header("X-API-Key", xApiKey).build()
-		return cli.newCall(req).execute()
+	private fun buildApiUrl(endpoint: String, param: ParametersBuilder.() -> Unit = {}): Url {
+		return URLBuilder("https://www.bungie.net/Platform").apply {
+			// add endpoint to url
+			appendPathSegments(endpoint)
+			// process query parameters
+			parameters.let(::BungieParametersBuilder).param()
+		}.build()
 	}
 
-	private fun getWithQuery(url: String, query: Map<String, Any>): Response {
-		val httpUrl =
-			HttpUrl.Builder().scheme("https").host("www.bungie.net").addPathSegments("/Platform/").addPathSegment(url)
-				.apply {
-					query.forEach { (queryName, queryEntity) ->
-						if(queryEntity is Iterable<*>) {
-							val queryValue = queryEntity.filterNotNull().joinToString(separator = ",")
-							this.addQueryParameter(queryName, queryValue)
-						} else {
-							throw BungieException("Unexpected type of queries: ${queryEntity.javaClass.canonicalName}")
-						}
-					}
-				}.build()
-
-		val req = Request.Builder().get().url(httpUrl).header("X-API-Key", xApiKey).build()
-		return cli.newCall(req).execute()
+	private fun HttpRequestBuilder.processAuth(requireAccessToken: Boolean = false, errorTracingContext: String) {
+		this.header(HEADER_API_KEY, xApiKey)
+		if(requireAccessToken) {
+			require(accessToken != null) { "AccessToken must be provided when calling '$errorTracingContext'" }
+			this.header(HttpHeaders.Authorization, "Bearer $accessToken")
+		}
 	}
 
-	private fun post(url: String, query: Map<String, Any> = mapOf(), body: RequestBody = EMPTY_REQUEST): Response {
-		val httpUrl =
-			HttpUrl.Builder().scheme("https").host("www.bungie.net").addPathSegments("/Platform/").addPathSegment(url)
-				.apply {
-					query.forEach { (queryName, queryEntity) ->
-						if(queryEntity is Iterable<*>) {
-							val queryValue = queryEntity.filterNotNull().joinToString(separator = ",")
-							this.addQueryParameter(queryName, queryValue)
-						}
-					}
-				}.build()
-		val request = Request.Builder().post(body).url(httpUrl).header("X-API-Key", xApiKey).build()
-		return cli.newCall(request).execute()
+	private suspend fun get(
+		url: String,
+		parameters: ParametersBuilder.() -> Unit = {},
+		withAccessToken: Boolean = false,
+	): HttpResponse {
+		return http.get(buildApiUrl(url, parameters)) {
+			// set apikey and access token
+			processAuth(withAccessToken, "ApiEndpoint: $url")
+		}
 	}
 
-	private fun getResource(url: String): Response {
-		val req = Request.Builder().get().url("https://www.bungie.net$url").header("X-API-Key", xApiKey).build()
-		return cli.newCall(req).execute()
+	private suspend fun post(
+		url: String,
+		parameters: ParametersBuilder.() -> Unit = {},
+		body: Any? = null,
+		contentType: ContentType? = ContentType.Application.Json,
+		withAccessToken: Boolean = false,
+	): HttpResponse {
+		return http.post(buildApiUrl(url, parameters)) {
+			// set apikey and access token
+			processAuth(withAccessToken, "ApiEndpoint: $url")
+
+			// set body
+			setBody(body)
+			contentType?.let { contentType(it) }
+		}
 	}
+
+	private fun buildResourceUrl(relativePath: String): Url {
+		return URLBuilder("https://www.bungie.net").apply {
+			appendPathSegments(relativePath)
+		}.build()
+	}
+
+	private suspend fun getResource(relativePath: String): HttpResponse {
+		return http.get(buildResourceUrl(relativePath)) {
+			processAuth(false, "Resource: $relativePath")
+		}
+	}
+
+	private fun setToken(accessToken: String) {
+		logger.info("AccessToken updated!")
+		if(Debugging.trustedMode) {
+			logger.info("New AT: $accessToken")
+		}
+		this.accessToken = accessToken
+	}
+
+	/**
+	 * 设置 [BungieApi.accessToken]
+	 */
+	fun setToken(accessToken: AccessToken) = setToken(accessToken.accessToken)
 
 	val authorize by lazy { Authorize() }
+
 	val destiny2 = Destiny2()
 	val helpers = Helpers()
 
@@ -82,66 +125,96 @@ class BungieApi(
 		 * 获取授权地址
 		 * @param clientId 应用的 client_id（在棒鸡 Application 中查看）
 		 */
-		fun getAuthorizeUrl(clientId: String): HttpUrl {
-			return "https://www.bungie.net/en/oauth/authorize".toHttpUrl().newBuilder()
-				.addQueryParameter("response_type", "code")
-				.addQueryParameter("client_id", clientId)
-				.addQueryParameter("state", "1")
-				.build()
+		fun getAuthorizeUrl(clientId: String, state: String = "1"): Url {
+			return URLBuilder("https://www.bungie.net/en/oauth/authorize").apply {
+				parameters.append("state", state)
+				parameters.append("client_id", clientId)
+				parameters.append("response_type", "code")
+			}.build()
 		}
 
-		fun getToken(code: String, clientId: String, clientSecret: String): AccessToken =
-			post("/App/OAuth/Token", body = FormBody.Builder()
-				.add("grant_type", "authorization_code")
-				.add("code", code)
-				.add("client_id", clientId)
-				.add("client_secret", clientSecret)
-				.build()
-			).json.getTyped()
+		suspend fun getToken(code: String, clientId: String, clientSecret: String): AccessToken = post(
+			"/App/OAuth/Token/",
+			body = FormDataContent(
+				parametersOf(
+					"grant_type" to "authorization_code",
+					"code" to code,
+					"client_id" to clientId,
+					"client_secret" to clientSecret
+				)
+			),
+			contentType = ContentType.Application.FormUrlEncoded
+		).body()
+
+		suspend fun refreshToken(refreshToken: String, clientId: String, clientSecret: String): AccessToken = post(
+			"/App/OAuth/Token/",
+			body = FormDataContent(
+				parametersOf(
+					"grant_type" to "refresh_token",
+					"refresh_token" to refreshToken,
+					"client_id" to clientId,
+					"client_secret" to clientSecret
+				)
+			),
+			contentType = ContentType.Application.FormUrlEncoded
+		).body()
 	}
+
+	private fun parametersOf(
+		vararg pairs: Pair<String, String>,
+	): Parameters = parametersOf(pairs.associate { (key, value) -> key to listOf(value) })
 
 	inner class Destiny2 internal constructor() {
 
-		fun getDestinyManifest(): DestinyManifest = get("/Destiny2/Manifest/").json.response.getTyped()
+		suspend fun getDestinyManifest(): BungieApiResponse<DestinyManifest> = get("/Destiny2/Manifest/").body()
 
-		fun getDestinyManifest(entityType: EntityType, hashIdentifier: UInt): DestinyDefinition =
-			get("/Destiny2/Manifest/${entityType.name}/$hashIdentifier/").json.response.getTyped()
+		suspend fun getDestinyManifest(
+			entityType: EntityType,
+			hashIdentifier: UInt,
+		): BungieApiResponse<DestinyDefinition> = get("/Destiny2/Manifest/${entityType.name}/$hashIdentifier/").body()
 
-		fun searchDestinyPlayer(membershipType: MembershipType, displayName: String): List<UserInfoCard> =
-			get("/Destiny2/SearchDestinyPlayer/${membershipType.value}/$displayName/").json.response.getTyped()
+		suspend fun searchDestinyPlayer(
+			membershipType: MembershipType,
+			displayName: String,
+		): BungieApiResponse<List<UserInfoCard>> =
+			get("/Destiny2/SearchDestinyPlayer/${membershipType.value}/$displayName/").body()
 
-		fun getProfile(
-			membershipType: MembershipType, destinyMembershipId: Long, components: List<DestinyComponentType>
-		): DestinyProfileResponse = getWithQuery(
-			"/Destiny2/${membershipType.value}/Profile/$destinyMembershipId/",
-			mapOf("components" to components.map { it.value })
-		).json.response.getTyped()
+		private fun lambdaAppendComponents(components: List<DestinyComponentType>): ParametersBuilder.() -> Unit = {
+			appendAll("components", components.map { it.value.toString() })
+		}
 
-		fun getCharacter(
+		suspend fun getProfile(
+			membershipType: MembershipType, destinyMembershipId: Long, components: List<DestinyComponentType>,
+		): BungieApiResponse<DestinyProfileResponse> = get(
+			"/Destiny2/${membershipType.value}/Profile/$destinyMembershipId/", lambdaAppendComponents(components), true
+		).body()
+
+		suspend fun getCharacter(
 			membershipType: MembershipType,
 			destinyMembershipId: Long,
 			characterId: Long,
-			components: List<DestinyComponentType>
-		): DestinyCharacterResponse = getWithQuery(
+			components: List<DestinyComponentType>,
+		): BungieApiResponse<DestinyCharacterResponse> = get(
 			"/Destiny2/${membershipType.value}/Profile/$destinyMembershipId/Character/$characterId/",
-			mapOf("components" to components.map { it.value })
-		).json.response.getTyped()
+			lambdaAppendComponents(components)
+		).body()
 
-		fun getItem(
+		suspend fun getItem(
 			membershipType: MembershipType,
 			destinyMembershipId: Long,
 			itemInstanceId: Long,
-			components: List<DestinyComponentType>
-		): DestinyItemResponse =
-			getWithQuery("/Destiny2/${membershipType.value}/Profile/$destinyMembershipId/Item/$itemInstanceId/",
-				mapOf("components" to components.map { it.value })).json.response.getTyped()
+			components: List<DestinyComponentType>,
+		): BungieApiResponse<DestinyItemResponse> = get(
+			"/Destiny2/${membershipType.value}/Profile/$destinyMembershipId/Item/$itemInstanceId/",
+			lambdaAppendComponents(components)
+		).body()
 
 		// TODO: Add other API entries
 	}
 
 	inner class Helpers internal constructor() {
 
-		fun getBungieResource(path: String) = getResource(path)
+		suspend fun getBungieResource(path: String) = getResource(path)
 
 	}
 
@@ -152,7 +225,16 @@ class BungieApi(
 		 */
 		val HashId.lggUrl get() = "https://www.light.gg/db/items/$hash/"
 
+		/**
+		 * (property) bungie.api.show-token
+		 * 是否在 [BungieApi.toString] 时显示 [BungieApi.accessToken]
+		 */
+		private val shouldShowToken get() = Debugging.trustedMode
+
 	}
+
+	override fun toString(): String =
+		if(shouldShowToken) "BungieApi(apiKey=$xApiKey, token=$accessToken)" else "BungieApi(apiKey=$xApiKey)"
 
 }
 
@@ -165,55 +247,21 @@ value class HashId(val hash: UInt) {
 	}
 }
 
-val Response.json: JsonElement
-	get() {
-		val bodyContent = body?.string() ?: throw NullPointerException("Missing body content of the response.")
-		return ktJson.parseToJsonElement(bodyContent)
-	}
-
-fun Response.getJsonKt(): JsonElement {
-	val content = body?.string() ?: throw BungieException("Missing response body content.")
-	return kotlin.runCatching {
-		ktJson.parseToJsonElement(content)
-	}.onFailure {
-		logger.warn("Exception occurred on parsing following response content:")
-		logger.warn(content)
-		throw BungieException(it)
-	}.getOrThrow()
+@Serializable
+data class BungieApiResponse<T>(
+	@SerialName("Response")
+	val response: T? = null,
+	@SerialName("ErrorCode")
+	val errorCode: Int? = null,
+	@SerialName("ThrottleSeconds")
+	val throttleSeconds: Int? = null,
+	@SerialName("Message")
+	val message: String? = null,
+	@SerialName("MessageData")
+	val messageData: Map<String, String?>? = null,
+) {
+	val data: T get() = response ?: error("Cannot get response data, $message")
 }
-
-private val ktJson = Json {
-	isLenient = true
-	prettyPrint = true
-	ignoreUnknownKeys = true
-	coerceInputValues = true
-
-	serializersModule = SerializersModule {
-		contextual(OffsetDateTime::class, OffsetDateTimeSerializer)
-	}
-}
-
-private inline fun <reified T> JsonElement.getTyped() = runCatching {
-	ktJson.decodeFromJsonElement<T>(this)
-}.onFailure {
-	logger.error("Unable to serialize the content follow to ${T::class.java.simpleName}:")
-	logger.error(this)
-}.getOrThrow()
-
-val JsonElement.response: JsonElement
-	get() = this.jsonObject.response
-
-val JsonObject.response: JsonElement
-	get() = this["Response"] ?: throw NullPointerException("Missing 'Response' in the object.")
-val JsonObject.errorCode: Int?
-	get() = this["ErrorCode"]?.jsonPrimitive?.int
-val JsonObject.throttleSeconds: Int?
-	get() = this["ThrottleSeconds"]?.jsonPrimitive?.int
-val JsonObject.message: String?
-	get() = this["Message"]?.jsonPrimitive?.content
-val JsonObject.messageData: JsonObject?
-	get() = this["MessageData"]?.jsonObject
-
 
 // Helpers
 

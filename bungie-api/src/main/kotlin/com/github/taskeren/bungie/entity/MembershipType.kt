@@ -8,6 +8,7 @@ enum class MembershipType(val value: Int, val trackerName: String? = null) {
 	TigerSteam(3, "steam"),
 	TigerBlizzard(4),
 	TigerStadia(5),
+	TigerEgs(6),
 	TigerDemon(10),
 	BungieNext(254),
 	All(-1);

@@ -16,3 +16,4 @@ build
 /bungie-api/test.toml
 /bungie_oauth.properties
 /keystore.jks
+/logs/
